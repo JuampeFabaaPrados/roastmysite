@@ -1,65 +1,188 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+type RoastSection = {
+  score: number;
+  issues: string[];
+  recommendations: string[];
+};
+
+type RoastResponse = {
+  success?: boolean;
+  data?: {
+    overallScore: number;
+    summary: string;
+    seo: RoastSection;
+    copy: RoastSection;
+    ux: RoastSection;
+    conversion: RoastSection;
+    topPriorities: string[];
+    roast: string;
+  };
+  error?: string;
+};
 
 export default function Home() {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<RoastResponse | null>(null);
+
+  const handleAnalyze = async () => {
+    if (!url.trim()) return;
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/roast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+      setResult(data);
+    } catch {
+      setResult({ error: "Error conectando con la API" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen bg-black px-6 py-16 text-white">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="text-5xl font-bold tracking-tight">SiteRoast AI</h1>
+        <p className="mt-4 max-w-2xl text-lg text-zinc-300">
+          Descubre por qué tu web está perdiendo clientes y qué cambiar
+          exactamente para mejorar SEO, UX, copy y conversión.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+          <input
+            type="text"
+            placeholder="Introduce una URL, por ejemplo: nike.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none"
+          />
+          <button
+            onClick={handleAnalyze}
+            disabled={loading}
+            className="rounded-xl bg-white px-6 py-3 font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {loading ? "Analizando..." : "Roast my site"}
+          </button>
         </div>
-      </main>
+
+        {result?.error && (
+          <div className="mt-8 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+            {result.error}
+          </div>
+        )}
+
+        {result?.data && (
+          <div className="mt-10 space-y-6">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <p className="text-sm uppercase tracking-widest text-zinc-400">
+                Overall score
+              </p>
+              <p className="mt-2 text-6xl font-bold">
+                {result.data.overallScore}/100
+              </p>
+              <p className="mt-4 text-lg text-zinc-300">
+                {result.data.summary}
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <SectionCard
+                title="SEO"
+                score={result.data.seo.score}
+                issues={result.data.seo.issues}
+                recommendations={result.data.seo.recommendations}
+              />
+
+              <SectionCard
+                title="UX"
+                score={result.data.ux.score}
+                issues={result.data.ux.issues}
+                recommendations={result.data.ux.recommendations}
+              />
+
+              <SectionCard
+                title="Copywriting"
+                score={result.data.copy.score}
+                issues={result.data.copy.issues}
+                recommendations={result.data.copy.recommendations}
+              />
+
+              <SectionCard
+                title="Conversión"
+                score={result.data.conversion.score}
+                issues={result.data.conversion.issues}
+                recommendations={result.data.conversion.recommendations}
+              />
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Top prioridades</h2>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-zinc-300">
+                {result.data.topPriorities.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <h2 className="text-2xl font-semibold">Roast final</h2>
+              <p className="mt-4 text-zinc-300">{result.data.roast}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function SectionCard({
+  title,
+  score,
+  issues,
+  recommendations,
+}: {
+  title: string;
+  score: number;
+  issues: string[];
+  recommendations: string[];
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-2xl font-semibold">{title}</h2>
+        <span className="text-2xl font-bold">{score}/100</span>
+      </div>
+
+      <div className="mt-5">
+        <h3 className="font-medium text-zinc-200">Problemas detectados</h3>
+        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-zinc-400">
+          {issues.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-medium text-zinc-200">Qué cambiar exactamente</h3>
+        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-zinc-400">
+          {recommendations.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
