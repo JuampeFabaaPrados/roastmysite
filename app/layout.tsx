@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WEBroast - Roast Your Website with AI",
-  description: "Roast your website with the power of AI",
+  description: " app",
 };
 
 export default function RootLayout({
